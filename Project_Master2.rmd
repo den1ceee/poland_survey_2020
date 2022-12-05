@@ -1,0 +1,1222 @@
+---
+title: "Project Master"
+author: "DURKA"
+date: "29 05 2020"
+output: 
+  html_document: 
+    code_folding: show
+    theme: yeti
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  error = FALSE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+# Project I
+
+## Introduction
+
+Hello! Our team, ΔУРКА, which members are: Anastasia Gorokhova, Denis Kapitonov, Kirill Mukhin, and Fedor Shvets presenting you our project on topic 'Frequency of Media Usage and Social Trust in Poland'. In this project, we will analyze ESS9-2018 data for Poland.
+
+The main themes we will cover are how often do people consume information about politics and current affairs, frequency of Internet usage, trust level to people, opinion on purity of intent. These variables will compared among different socio-demographic variables as age, gender, marital status, higher level of education, employment status.
+
+In this project each member contributed to its particular part (except the first step - research question which was contributed by everyone):
+  * Anastasia Gorokhova - creating descriptive table; histogram, its code and description;
+  * Denis Kapitonov - barplot, its code and description; decorative changes - legend, axis, and color customization;
+  * Kirill Mukhin - creating a table of central tendency measures; stacked barplot, its code and description;
+  * Fedor Shvets - boxplot, its code and description; satterplot,  its code and description;
+
+We upload necessary libraries and our original dataset of 1500 observations on 492 variables.
+
+```{r message = FALSE, warning = FALSE}
+library(ggplot2)
+library(dplyr)
+library(haven)
+library(kableExtra)
+library(car)
+library(psych)
+library(sjstats)
+library(DescTools)
+library(readr)
+library(knitr)
+library(labelled)
+library(sjlabelled)
+library(sjmisc) 
+library(ggeffects)  
+library(tidyverse)
+library(magrittr)
+library(cowplot)
+library(gridExtra)
+library(snakecase)
+library(stargazer)
+library(effects)
+library(scales)
+library(sjPlot)
+
+ESS9 <- read_sav("C:/Users/User/Desktop/HSE Study Club/2nd Year/Data Analysis in Sociology/Projects/ESS9PL.sav")
+```
+
+## Data Selection
+
+There we choose 10 variables needed for the further analysis - 5 related to the topic of 'Media & Social Trust' and 5 socio-demographic. Also, we examine structure of the new dataset to check whether the filter operation was performed in accurate way.
+
+```{r}
+ESS_NEW = ESS9 %>% dplyr::select(nwspol, netusoft, netustm, ppltrst, pplfair, agea, gndr, marsts, eisced, emplrel, domicil)
+str(ESS_NEW)
+str(ESS_NEW$emplrel)
+```
+
+## Data Description
+
+In order to describe variables we have, we create three vectors with original names, description, and variable types.
+
+```{r}
+Variable_Name = c('nwspol', 'netusoft', 'netustm', 'ppltrst', 'domicil', 'agea', 'gndr', 'marsts', 'eisced', 'emplrel')
+
+Description = c('Frequency of consuming (watching, reading, or listening) information about politics and current affairs', 'Frequency of Internet usage', 'Frequency of Internet usage on usual day in minutes', 'Level of trust', 'Domicile', 'Calculated age of a respondent', 'Sex of a respondent', 'Marital status of a respondent', 'Highest level of education of a respondent on European survey version of ISCED scale', 'Employment relation of a respondent')
+
+Variable_Type = c('Ratio', 'Ordinal', 'Ratio', 'Nominal', 'Ordinal', 'Ratio', 'Nominal', 'Nominal', 'Ordinal', 'Nominal')
+```
+
+Further, we combine these vectors in a data frame to provide more convenient way of representation.
+
+```{r}
+data_description <- data.frame(Variable_Name, Description, Variable_Type, stringsAsFactors = FALSE)
+
+kable(data_description) %>% 
+  kable_styling(bootstrap_options = c('bordered'), full_width = FALSE)
+```
+
+## Central Tendency Measures Table
+
+To create descriptive table for central tendency measures we firstly create a Mode function.
+
+```{r}
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+```
+
+There we explore variables of which class do we have.
+
+```{r}
+class(ESS_NEW$nwspol)
+class(ESS_NEW$netusoft)
+class(ESS_NEW$netustm)
+class(ESS_NEW$ppltrst)
+class(ESS_NEW$pplfair)
+class(ESS_NEW$agea)
+```
+
+As we can see, all of these variables are of haven_labelled type, so we should treat them as numeric one. To do this, we firstly re-class them to numeric type.
+
+```{r}
+ESS_NEW$nwspol = as.numeric(ESS_NEW$nwspol)
+ESS_NEW$netusoft = as.numeric(ESS_NEW$netusoft)
+ESS_NEW$netustm = as.numeric(ESS_NEW$netustm)
+ESS_NEW$ppltrst = as.numeric(ESS_NEW$ppltrst)
+ESS_NEW$pplfair = as.numeric(ESS_NEW$pplfair)
+ESS_NEW$agea = as.numeric(ESS_NEW$agea)
+```
+
+Then, we create vectors of three statistical measures (mean, mode, and median) for these seven variables. In order to calculate them, we should remove all missing values with function na.omit().
+
+```{r}
+m_nwspol <- c(round(mean(na.omit(ESS_NEW$nwspol)), digits = 2), round(Mode(na.omit(ESS_NEW$nwspol)), digits = 0),round(median(na.omit(ESS_NEW$nwspol)), digits = 0))
+m_netusoft <- c(round(mean(na.omit(ESS_NEW$netusoft)), digits = 2), round(Mode(na.omit(ESS_NEW$netusoft))), round(median(na.omit(ESS_NEW$netusoft))))
+m_netustm <- c(round(mean(na.omit(ESS_NEW$netustm)), digits = 2), round(Mode(na.omit(ESS_NEW$netustm))), round(median(na.omit(ESS_NEW$netustm))))
+m_ppltrst <- c(round(mean(na.omit(ESS_NEW$ppltrst)), digits = 2), round(Mode(na.omit(ESS_NEW$ppltrst))), round(median(na.omit(ESS_NEW$ppltrst))))
+m_agea <- c(round(mean(na.omit(ESS_NEW$agea)), digits = 2), round(Mode(na.omit(ESS_NEW$agea))), round(median(na.omit(ESS_NEW$agea))))
+```
+
+Next, we create a table and assign names to our measures in perspective order - mean, mode, and median. And visualize this result with plotly library.
+
+```{r}
+descriptives_table =  data.frame(m_nwspol, m_netusoft, m_netustm, m_ppltrst, m_agea, stringsAsFactors = FALSE)
+rownames(descriptives_table) <- c("Mean", "Mode", "Median")
+
+kable(descriptives_table) %>% 
+  kable_styling(bootstrap_options = c('bordered'), full_width = FALSE)
+```
+
+## Histogram
+
+There we start to analyze data we have using ggplot2 package.
+
+1. How long do people in Poland use the Internet during the day? And how do these indicators differ between the genders?
+
+```{r}
+z = ESS_NEW %>% group_by(gndr) %>% dplyr::summarise(avg = mean(na.omit(netustm)), med = median(na.omit(netustm)))
+
+ggplot(filter(ESS_NEW, !is.na(netustm)), aes(netustm, fill = as.factor(gndr))) +
+  geom_histogram(binwidth = 50) +
+  facet_wrap(. ~ gndr) +
+  geom_vline(data = z, aes(xintercept = avg, color = 'Mean'), linetype = 'dashed', size = 1) +
+  geom_vline(data = z, aes(xintercept = med, color = 'Median'), linetype = 'dashed', size = 1) +
+  ggtitle('Frequency of Internet usage during usual day in Poland') +
+  xlab('Time spent on Internet, in minutes') +
+  ylab('Number of records') +
+  scale_fill_discrete(name = 'Gender', labels = c('Male', 'Female')) +
+  scale_color_manual(name = 'Statistic', values = c(Mean = '#4B0082', Median = '#A52A2A')) +
+  theme_classic()
+```
+
+THe distributions in both cases are non normal, right-skewed. 
+There we can see that the biggest part of respondents tend to use Internet less than 3 hours. There we can also unexpected downgrade in around 130 minutes. Starting with approximately 250 minutes we can notice decrease in amount of female internet users, but on 500 minutes they start to dominate.
+
+## Barplot
+
+2. What marital status is most common in Poland?
+
+```{r, width = 70}
+ggplot(filter(ESS_NEW, !is.na(marsts)), aes(as.factor(marsts))) +
+  geom_bar(fill = '#20B2AA') +
+  ggtitle('Types of status marital status in Poland') +
+  xlab("Marital status)") +
+  ylab('Number of people with particular status') +
+  scale_x_discrete(name = 'Marital Status', labels = c('Legally married', 'Legally divorced/Civil union dissolved', 'Widowed/Civil partner died', 'Never married/civil union')) +
+  theme_classic()+
+  coord_flip()
+```
+
+So, we can see that people in Poland do not aim to have legal marriage. Most of them don't have such experience. Moreover, it looks like there are more divorced couples that those who are married. We can assume that institution of marriage in Poland is going through crisis.
+
+## Scatterplot
+
+3. Is there any association between age and the time spent on consuming information in different form about politics and current affairs?
+
+```{r}
+ggplot(filter(ESS_NEW, !is.na(nwspol)), aes(x = as.numeric(agea), y = as.numeric(nwspol))) +
+  geom_point(size = 1, alpha = 0.5, color = '#CD5C5C') +
+  geom_smooth(method = 'lm') +
+  ggtitle('Correlation between consumption of information on\npolitics and current affairs and age') +
+  xlab('Age of a respondent') +
+  xlim(15, NA)+
+  ylab('Time spent on consuming information\nabout politics and current affairs, in minutes') +
+  theme_classic()
+
+```
+
+This scatterplot shows the strong positive linear correlation between age and the frequency of consuming information. However, there are some outliers for all age groups.
+
+## Boxplot
+
+4. Is there any correlation between the frequency of Internet consumption and employment relations by marital status?
+
+```{r}
+ggplot(filter(ESS_NEW, !is.na(emplrel), !is.na(marsts), !is.na(netustm))) +
+  geom_boxplot(aes(x = as.factor(emplrel), y = as.numeric(netustm), fill = as.factor(marsts)), position = 'dodge') +
+  ggtitle('Association between employment relations and\nfrequency of Internet usage by marital status') +
+  xlab('Employment relation') +
+  ylab('Time spent on Internet, in minutes') +
+  scale_fill_discrete(name = 'Marital Status', labels = c('Legally married', 'Legally divorced/Civil union dissolved', 'Widowed/Civil partner died', 'Never married or in\nlegally registered civil union')) +
+  scale_x_discrete(labels = c('Employee', 'Self-employed', 'Working for own\nfamily business')) +
+  theme_classic()
+```
+
+Firstly, we can see some differences in our sample - for employees and for self-employed there are four marital groups, but for self-employed two of them suffer from lack of data. However for people who work for own family business there is only one marital group. Overall, employees spend more time for Internet compare to others. Nevertheless, within this group there is a category of never married respondents who present four higher outliers, as well as have longer higher whisker. 
+
+## Stacked Barplot
+
+Is there any relation between place of living and level of trust?
+
+Here 0 - cannot trust at all and 10 - everybody could be trusted
+
+```{r, height = 20, width = 100}
+ggplot(filter(ESS_NEW, !is.na( domicil), !is.na(pplfair)), aes(x = as.factor(domicil), fill = as.factor(pplfair))) +
+  ggtitle('Level of Trust among Domicile of respondents') +
+  xlab('current activity') +
+  ylab('Proportion of respondents') +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_discrete(name = "Level of trust", labels = c("0 - Most people try to take advantage of me", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10 - Most people try to be fair")) +
+  scale_x_discrete( name = "Domicile", labels = c("A big city", " Suburbs or outskirts of big city", "Town or small city", " Country village", "Farm or home in countryside")) +
+  geom_bar(position = "fill") +
+  coord_flip() +
+  theme_bw()
+```
+ 
+As we can see, those who live in farms or countrysides are more likely to trust others, and those who live in cities are less likely to trut others. So, the tendency is quite obvious: the more modern and crowded place of living is, the less people tend to think that others will try to take an advantage of them
+
+# Project II
+
+## Introduction
+
+Hello! This is our team ΔУРКА again, which members are: Anastasia Gorokhova, Denis Kapitonov, Kirill Mukhin, and Fedor Shvets presenting you our project on topic 'Media and Social Trust'. In this project, we will conduct Chi-squared test, T-test and ANOVA F-test.
+
+In this project each member contributed to its particular part:
+* Anastasia Gorokhova – conducting T-test with preparing a data, checking the normality in two ways, formulating hypothesis, conducting all formal tests and making conclusions
+* Denis Kapitonov - selecting the necessary variables, describing them, constructing a table with variables, visual design of the project
+* Kirill Mukhin – conducting ANOVA F-test with variable preparation, checking the distribution, conducting all formal tests, formulating hypothesis and making conclusions
+* Fedor Shvets – conducting Chi-squared test with constructing contingency table, formulating hypothesis, conducting a test, checking the results with the visualization of residuals and making conclusions
+
+## Data Selection
+
+For each test we select variables from the dataset. However, in the block "Media and social trust" there are no exact categorical or nominal vatiable, and because of this we decided to interpret some ordinal variables as categotical. 
+
+```{r}
+ESS_NEW1 = ESS9 %>% dplyr::select(domicil, nwspol, netustm, pplfair, gndr, marsts, netusoft)
+str(ESS_NEW1)
+```
+
+## Data Description
+
+In order to describe variables we have, we create four vectors with original names, description, variable types and test type
+
+```{r}
+Variable_Name = c('domicil', 'nwspol', 'netustm', 'gndr', 'marsts', 'netusoft')
+
+Description = c('Respondent description of his/her domicile', 'Frequency of consuming (watching, reading, or listening) information about politics and current affairs', 'Frequency of Internet usage on usual day in minutes', 'Sex of a respondent', 'Marital status of a respondent', 'Frequency of Internet usage')
+
+Variable_Type = c('Nominal', 'Ratio', 'Ratio', 'Nominal', 'Nominal', 'Ordinal')
+
+Test_Type <- c("Chi-squared test", "T-test for independet variables", "ANOVA", "T-test for independet variables", "ANOVA", "Chi-squared test")
+```
+
+Further, we combine these vectors in a data frame to provide more convenient way of representation.
+
+```{r}
+data_description <- data.frame(Variable_Name, Description, Variable_Type, Test_Type, stringsAsFactors = FALSE)
+
+kable(data_description) %>% 
+  kable_styling(bootstrap_options = c('bordered'), full_width = FALSE)
+```
+
+## Chi-Squared Test
+
+Conducting Chi-squared test
+
+Step 1. Constructing contengency table. 
+
+For Chi-squared test we chose two variables. One categorical variable – “Respondent description of his/her domicile” and one ordinal variable, which is we also interpret as categorical – “Frequency of use of the Internet or other devices for work or personal aims”. Some categories of our categorical variable have less than 5 observations in the contingency table cells, so we merge them with a bigger one ("Suburbs or outskirts of big city" with "A big city" and "Farm or home in countryside" with "Country village").
+
+```{r}
+ESS_NEW1$domicil1[ ESS_NEW1$domicil == 1 | 
+                  ESS_NEW1$domicil == 2 ] <- 1
+ESS_NEW1$domicil1[ ESS_NEW1$domicil == 3 ] <- 2
+ESS_NEW1$domicil1[ ESS_NEW1$domicil == 4 | 
+                  ESS_NEW1$domicil == 5 ] <- 3
+
+media_chi <- ESS_NEW1 %>% dplyr::select(domicil1, netusoft)
+
+media_chi$domicil1 <- factor(media_chi$domicil1, labels = c("A big city and its suburbs or outskirts", "Town or small city", "Countryside farm, home or village"))
+media_chi$netusoft <- factor(media_chi$netusoft, labels = c("Never", "Only occasionally", "A few times a week", "Most days", "Every day	"), ordered = F, exclude = NA)
+
+Table_chi <- table(media_chi$domicil1, media_chi$netusoft)
+kable(Table_chi) %>% 
+  kable_styling(bootstrap_options = c("bordered", "responsive", "striped"), full_width = FALSE)
+```
+
+Step 2. Creating stacked barplot in order to check two chosen categories for chi-squared test.
+
+```{r}
+ggplot(filter(ESS_NEW1, !is.na(netusoft), !is.na(domicil1)), aes(x = as.factor(netusoft), fill = as.factor(domicil1))) + 
+  geom_bar(position = "fill") +
+  ggtitle('Frequency of internet usage due to the description of respondent domicile\nin Poland') + 
+  xlab('Frequency of use of the Internet or other devices for work or personal aims') +
+  ylab('Proportion of respondents') +
+  scale_x_discrete(labels = c('Never', 'Only\noccasionaly', 'A few times\na week', 'Most days', 'Every day')) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_discrete(name = 'Type of the domicile', labels = c('A big city and its suburbs or outskirts', 'Town or small city', 'Countryside farm, home or village')) +
+  theme_classic()
+```
+
+Based on this stacked barplot we can make a conclusion that respondents of each type of domicile with some degree of frequency spend time on the Internet or with other devices. We can notice that representatives of a big city use the Internet or other devices every day, while others use the Internet less often: residents of town and small city most often use the Internet or other devices most days and residents of country village use Internet or other devices most often a few times a week.
+
+Step 3. Formulating research hypothesis.
+
+H0 - there is no relation between the frequency of the usage of the Internet and other devices and type of domicile where a respondents live.
+Ha - there is a relation between the frequency of the usage of the Internet and other devices and type of domicile where a respondents live.
+
+Step 4. Conducting Chi-squared test.
+
+```{r}
+chi.test <- chisq.test(Table_chi)
+chi.test
+```
+
+Conclusion. After conducting a chi-squared test we got a statistically significant p-value, since it is less than 0.01, which give us a strong basement for rejection the H0, that is frequency of the usage of the Internet and other devices and type of domicile where a respondents live is related between each other.
+
+Step 5. Let's take a look at the  residuals.
+
+```{r}
+kable(chi.test$stdres)
+```
+
+```{r}
+assocplot(t(Table_chi), main = "Visualization of the Residuals" )
+```
+
+On this graph, in different places we can observe that the residuals have different values. There are much more residents of big city and its suburbs or outkirts who use Internet or other devices every day observed than expected. Inhabitans of Countryside farm, home or village make up the largest group of those who do not use the Internet at all observations of whom are also bigger than expected and also there is great negative residual for Every day group, so the number of observed countryside inhabitants who uses Internet daily is less than expected. Residents of towns and small cities are distributed approximately equally in the frequency of Internet use compared to others (but also the Most days has a bigger positive difference between observed and expected). This variation in group sizes indicates that the variables are not independent and once again confirms our previous conclusion that there is strong basement for rejecting the null hypothesis. Based on the test and on the plot illustrating the residuals we confirmed that there is a relation between a frequency of the usage of the Internet and other devices and type of domicile where a respondents live.
+
+## T-Test
+
+First of all, we should prepare data for t-test and explore it with the help of boxplot. There we need one numeric variable - ratio frequency of consuming (watching, reading, or listening) information about politics and current affairs - and nominal one - sex of a respondent.
+
+```{r}
+ttest = dplyr::select(ESS9, gndr, nwspol)
+
+ttest$gndr <- factor(ttest$gndr, labels = c("Male", "Female"), ordered = F, exclude = NA)
+
+ggplot() +
+  geom_boxplot(data = filter(ttest, !is.na(gndr), !is.na(nwspol)), aes(x = gndr, y = as.numeric(nwspol)), fill="#A44200", col="#A44200", alpha = 0.5) +
+  xlab("Gender") + 
+  ylab("News consumption in minutes") +
+  ggtitle("Consumption of news about politics according to gender") +
+  theme_classic()
+```
+
+As we can see, the medians are visually equal, however, the range between the median and 3rd quartile is higher in male group as well as this group has taller whisker of maximum values. Moreover, both groups has a great amount of outliers of really big range - up to 1000 minutes of news consumption.
+
+Next step is checking of normality. First way to do this is to check skewness and kurtosis.
+
+```{r}
+describeBy(ttest, ttest$gndr)
+```
+
+Skewness is a measure of the symmetry in a distribution. The normal distribution is symmetrical, so skew should be equal to 0 in normal distribution. Among males skewness is equal to 4,35, among females - 4,75. Moreover, both groups have high kurtosis values (it tells us, whether the distribution is peaked or plain): 25.23 for males and 28.88 for females - it means that the distribuions are longer with fatter tails (leptokurtic, but for normal mesokurtic distibution kurtosis should be equal to 3). Thus, the distribution of the first group (male) is less sharp than the distribution of the second group. The distribution is more symmetrical in the group of males, but still it is far away from normal. However, both of skews are greater than 1, so both of the groups have a high positive skewness (right).
+
+Now let us draw a density plot to check the distribution.
+
+```{r message = F, warning = F}
+ttest$nwspol = as.numeric(ttest$nwspol)
+t = ttest %>% group_by(gndr) %>% dplyr::summarise(avg = mean(na.omit(nwspol)), med = median(na.omit(nwspol)))
+
+ggplot(filter(ttest, !is.na(nwspol)), aes(x = nwspol, fill = gndr)) +
+  geom_histogram(position = "identity", alpha = 0.7) +
+  geom_density(col = "yellow", fill = "white", alpha = 0.1) +
+  scale_color_manual(name = "Measurement", values = c(median = "#cb3f68", mean = "#824acd")) +
+  xlab("Consumption of news (in minutes)") + 
+  ylab("Number of people") +
+  ggtitle("Gender distribution of consumption of political news (in minutes)") +
+  theme_classic() +
+  facet_wrap(. ~ gndr) +
+  geom_vline(data = t, aes(xintercept = avg, color = 'mean'), linetype = "dashed", size = 1) +
+  geom_vline(data = t, aes(xintercept = med, color = 'median'), linetype = "longdash", size = 1) +
+  geom_text(data = t, aes(x = 520, y = 125, label = "Mean:")) +
+  geom_text(data = t, aes(x = 545, y = 110, label = "Median:")) +
+  geom_text(data = t, aes(x = 710, y = 125, label = round(avg, 2))) +
+  geom_text(data = t, aes(x = 715, y = 110, label = round(med, 2)))
+```
+
+We can conclude that both groups are really far from normal distribution
+
+So, we claim that interest in politics depends on gender. To check our assumption we will conduct statistical test to highlight (or do not highlight) the correlation between gender and time (in minutes) spent on news about politics.
+
+Conducting T-test:
+
+H0: the mean time spent in political news (in minutes) of males and females does not differ.
+H1: the mean time does differ and, thus, there is a relation between gender and news consumption.
+
+```{r}
+t.test(ttest$nwspol ~ ttest$gndr)
+```
+
+Statistical conclusion: at the 5% significance level on the available data the null hypothesis should not be rejected in favor of the alternative one (p-value > 0.05).
+Substantive conclusion : there is no significant difference between males and females in consumption of political news. However, the means are different: males consume political news about 95 minutes a day on average and females only around 82 minutes a day.
+
+Next step is to conduct non-parametric test to double-check the results
+
+We have following hypotheses:
+H0: the two populations have the same distribution with the same median news consumption
+H1: the two populations  have the different distribution with the different median news consumption
+
+```{r}
+wilcox.test(nwspol ~ gndr, data = ttest)
+```
+
+Statistical conclusion: according to the obtained p-value, which is significant (0.002 which is less than 0.01), we have strong evidence to reject H0.
+Substantive conclusion: The Wilcoxon test says that the news consumption of people from the considered groups is significantly different among those males and females.
+
+Overall, the results of test are different, but taking into account the abnormality of data distribution we can conclude that the result of wilcox test is more trustful.
+So, there is a connection between gender and political news assumption.
+
+## ANOVA
+
+For ANOVA test we chose one ratio and one nominal variables - there are frequency of Internet usage on usual day in minutes and marital status. It is important that marital status has more than 2 levels, so ANOVA is better applied there. Also, there are three assumptions to use parametric ANOVA test and one these is independence of observations which in our case is performed as the data was independently collected.
+
+At first, we should take a look at how many observations do we have in our nominal variable.
+
+```{r}
+table(ESS_NEW1$marsts)
+```
+
+There we see that our first group (legally married Poles) has less than 30 observations. We could merge several groups into one, but they are too different in their meaning, so it would be absurd (first group stands for legally married and the second (4 in code) is for divorced, for example). So, here we decided to delete the first group at all and to use others in parametric ANOVA test.
+
+Let's create a new variable with 1 groups removed and others named
+
+```{r}
+ESS_NEW1$marital <- rep(NA, length(ESS_NEW1$marsts)) 
+
+ESS_NEW1$marital[ESS_NEW1$marsts == 4] <- "Legally divorced or\nCivil union dissolved"
+ESS_NEW1$marital[ESS_NEW1$marsts == 5] <- "Widowed or\nCivil partner died"
+ESS_NEW1$marital[ESS_NEW1$marsts == 6] <- "Never married or\nin legally registered civil union"
+```
+
+Now let's take a look at the distribution of a internet usage variable across marital status groups
+
+```{r}
+ggplot(filter(ESS_NEW1, !is.na(marital), !is.na(netustm)), aes(as.factor(marital), as.numeric(netustm))) +
+  geom_boxplot(aes(fill = as.factor(marsts))) +
+  ggtitle("The distribution of Internet usage frequency across marital status groups") +
+  xlab("Marital status of a respondent") +
+  ylab("Frequency of Internet usage on usual day in minutes") +
+  theme_classic() +
+  theme(legend.position = "none")
+```
+
+So, we see the differences in medians, outliers and variances. Now, we check the next ANOVA assumption - equality of variances - with Levene's test.
+
+```{r}
+leveneTest(ESS_NEW1$netustm ~ as.factor(ESS_NEW1$marital))
+```
+
+The Levene's Test indicated insignificant p-value of 0.1289, so the variances of groups are equal, further we will specify equal variances for F-test. Let's use aov function which implies equal variances.
+
+H0 - there is no difference in means of Internet usage between marital status groups.
+Ha - the difference in means of Internet usage between marital status groups is statistically significant.
+
+```{r}
+aov.out <- aov(as.numeric(ESS_NEW1$netustm) ~ as.factor(ESS_NEW1$marital))
+summary(aov.out)
+```
+
+P-value is less than 0.001, so the difference in means is statistically significant (H0 is rejected and Ha is accepted), so we conclude that there is statistically significant difference between the mean values of Internet Usage across Marital Status groups. The final assumption of parametric ANOVA test is normality of residuals. To check this we might create a Q-Q plot.
+
+```{r}
+plot(aov.out, 2)
+```
+
+As we see, the distributions of residuals is far from normal. However, let's check it more formal way.
+
+```{r}
+anova.res <- residuals(object = aov.out)
+describe(anova.res)
+```
+
+There we see that kurtosis is bigger than 2, it says against the normality, but we might also use Shapiro-Wilk normality test.
+
+```{r}
+shapiro.test(x = anova.res)
+```
+
+The p-value is statistically significant (less than 0.01), so now we are sure that residuals distribution is not normal. Nevertheless this assumptions does not hold, let's switch to post-hoc test. In our case of equal variances we use Tukey’s post hoc test.
+
+H0 - there is no difference in means of Internet usage between two particular marital status groups.
+Ha - the difference in means of Internet usage between two particular marital status groups is statistically significant.
+
+```{r}
+TukeyHSD(aov.out)
+```
+
+There we see that p-value is lower than 0.05 in the first and than 0.01 in the third pair, so they are statistically significant (H0 is rejeted). On the other hand the difference between widowed and divorced is not significant with p-value of 0.3 (H0 is not rejected). Let's check it by plot.
+
+```{r}
+par(mar = c(5, 15, 3, 1))
+Tukey <- TukeyHSD(aov.out)
+plot(Tukey, las = 2)
+```
+
+It is seen that the second pair crosses the 0 line, so it the difference in these two groups is not statistically significant. Now, it is time to calculate the effect size, omega-squared.
+
+```{r}
+anova_stats(aov.out)
+```
+
+The omega-squared is 0.036, it indicates that although the difference is statistically significant, the effect size is low.
+
+Let's check our conclusions with non-parametric ANOVA test - Kruskal-Wallis rank sum test - which does not imply assumptions (one of three did not hold for parametric ANOVA, so it is important to know non-parametric results).
+
+H0 - there is no difference in means of Internet usage between marital status groups.
+Ha - the difference in means of Internet usage between marital status groups is statistically significant.
+
+```{r}
+kruskal.test(as.numeric(netustm) ~ as.factor(marital), data = ESS_NEW1)
+```
+
+It resulted in low p-value, so confirming our previous conclusions about statistically significant differences in means across groups. As this test is significant, we might use non-parametric post hoc Dunn’s test.
+
+H0 - there is no difference in means of Internet usage between two particular marital status groups.
+Ha - the difference in means of Internet usage between two particular marital status groups is statistically significant.
+
+```{r}
+DunnTest(as.numeric(netustm) ~ as.factor(marital), data = ESS_NEW1)
+```
+
+It resulted again that only one pair of widowed and divorced does not have significant differences in their medians as the p-value is high. Other two pairs have low p-value and statistically significant differences confirming our previous Tukey's post hoc test.
+
+All in all, the difference between means of Internet usage frequency among different marital status groups is statistically significant, however, the effect size is low, and there is one pair of three with not statistically significant difference.
+
+# Project III
+
+## Introduction
+
+Hello! This is our team ΔУРКА again, which members are: Anastasia Gorokhova, Denis Kapitonov, Kirill Mukhin, and Fedor Shvets presenting you our project on topic 'Media and Social Trust'. In this project, we will explore correlations and create linear regression models. Each of us contributed to a particular part of this project:
+
+* Mukhin Kirill - data exploration (constructing different types of graphs with all their description); providing a summary and its description for the best regression model; statements about regression assumptions compliance; general conclusions based on the final table.
+* Shvets Fedor - constructing a correlation matrix with its description; constructing the first regression model with its description; regression equation with all coefficients and conclusions based on this equation; general conclusions based on the final table.
+* Kapitonov Denis - data selection; variables description for correlation; constructing table; recoding variables; searching the literature for hypotheses; providing a summary and its description for the best regression model;
+* Gorokhova Anastasia - constructing the second and the third regression model with their description; comparing all models with the conclusion; linear regression assumptions check.
+
+## Data Selection
+
+For the purposes of further analysis we create a new dataset containing only five variables we will need.
+
+```{r}
+ESS_NEW2 = ESS9 %>% select(netustm, rlgdgr, grspnum, agea, isco08)
+str(ESS_NEW2)
+```
+
+## Variables Description for Correlation
+
+As we are studying the topic 'Media & Social Trust' we chose one variable from this section as the outcome - frequency of Internet usage on a typical day. We suppose that nowadays Internet combines a lot of purposes of usage such as entertainment, news reading, chatting etc. Thus, it is important part of our lives and we found it interesting to explore which variables are correlated with this one. 
+
+As the predictor variables we chose three continuous ones:
+  
+* Age. We assume that older people will use Internet much less than the younger ones as they are used to a different way of life, without using such tools and do not use them as often as younger people. As can be seen from the statistics[1], younger people use Internet more often, so we want to check if our results will be the same. Thus, we expect that age will be negatively correlated with frequency of Internet usage with at least medium corr. coefficient.
+* Gross Pay. We consider this variable as an indicator of person's SES, so that people with higher pay will use Internet more frequently. As it is found in the research[2], SES can be associated with Internet usage, so we expect that it will be also positively correlated with gross pay in our data. We assume that the coefficient will be around 0.3.
+* Religiosity. This variable might be negatively associated with Internet usage as it is told in the research of Greg G. Armfield & R. Lance Holbert[3]. We want to check if the findings of that paper will be the same as ours. Moreover, we know that Poland is religious country[4], so the corr. coefficient is expected to be high.
+
+Also we chose one categorical variable as a predictor, which we will use in one of the regression models
+
+* Occupation. As we already mentioned it, C.Wangberg's et al. research gives us a good example of measuring relation between SES and internet use[2]. And as we know from theory, occupation is a good indicator of SES: It tells us more than the same gross pay and that is why this variable was chosen. We expect that relationships will be stronger compared to gross pay predictor as well as there will be a negative trend in Internet usage as we move from the first large occupational groups (Managers and Professionals) to the last (Elementary occupations).
+
+We put forward a research question:
+Which of our chosen variables predict the frequency of Internet use on typical day in Poland in the better way.
+
+We also formulate research hypotheses:
+
+Null hypotheses (H0):
+
+- There is no relation between age and frequency of Internet usage.
+- There is no relation between gross pay and frequency of Internet usage.
+- There is no relation between religiosity and frequency of Internet usage.
+- There is no relation between occupation and frequency of Internet usage.
+
+Alternative hypotheses (Ha):
+
+- There is relation between age and frequency of Internet usage.
+- There is relation between gross pay and frequency of Internet usage.
+- There is relation between religiosity and frequency of Internet usage.
+- There is relation between occupation and frequency of Internet usage.
+
+In order to describe variables we have, we create four vectors with original names, description, variable types and values range.
+
+```{r}
+Variable_Name = c('netustm', 'rlgdgr', 'grspnum', 'agea', 'isco08')
+
+Description = c('Frequency of Internet usage', 'Religiosity of respondent', 'Usual (weekly/monthly/annual) gross pay of respondent', 'Age of respondent', 'Occupation')
+
+Variable_Type = c('Ratio', 'Interval', 'Ratio', 'Ratio', 'Nominal')
+
+Measurement <- c('0-900', '0-10', '0-500000', '15-87', 'Occupational groups coded by ISCO-08 with range from 110 to 9629')
+```
+
+Further, we combine these vectors in a data frame to provide more convenient way of representation.
+
+```{r}
+data_description <- data.frame(Variable_Name, Description, Variable_Type, Measurement, stringsAsFactors = FALSE)
+
+kable(data_description) %>% 
+  kable_styling(bootstrap_options = c('bordered'), full_width = FALSE)
+```
+
+As we saw from str() function above, all variables are of haven_labelled class. Let's convert them into needed numeric for continuos variables and factor for categorical one.
+
+```{r}
+ESS_NEW2$netustm = as.numeric(as.character(ESS_NEW2$netustm))
+ESS_NEW2$rlgdgr = as.numeric(as.character(ESS_NEW2$rlgdgr))
+ESS_NEW2$grspnum = as.numeric(as.character(ESS_NEW2$grspnum))
+ESS_NEW2$agea = as.numeric(as.character(ESS_NEW2$agea))
+ESS_NEW2$isco08 = as.factor(ESS_NEW2$isco08)
+```
+
+Let's check if there are values coded as 'Refusal', 'Don't Know' etc. They are large values like 6666, 7777 or 8888.
+
+```{r}
+table(ESS_NEW2$netustm)
+table(ESS_NEW2$rlgdgr)
+table(ESS_NEW2$grspnum)
+table(ESS_NEW2$agea)
+table(ESS_NEW2$isco08)
+```
+
+As we see, there are no such values, so that we must remove all NAs in the dataset to have only observations having all of the variables.
+
+```{r}
+ESS_NEW2 = na.omit(ESS_NEW2)
+```
+
+## Data Exploration
+
+Let's have a look at the summary of the chosen variables.
+
+```{r}
+summary(ESS_NEW2)
+```
+
+Our outcome variable - netustm - seem to have assymetrical distribution - while it has 3rd quantile of 240, the maximum is 900, so the upper part of distribution has at least one huge outlier. The distribution of religiosity - rlgdgr - is left-skewed. Gross pay variable is also have huge outlier on the right side of a distibution. As agea has almost similar median and mean, it has distribution closer to normal (1st and 3rd quantiles are also looks symmetrical). Categorical variable - isco08  - has several categories with relatively big number of observations (21 for 5223 or 13 for 2341), while in the remaining categories there are less than 7.
+
+Now let's visualize the variables outliers. For make grspnum boxplot understandable (there is really huge outlier), we log the y axis.
+
+```{r warning = F}
+a = ggplot(ESS_NEW2, aes(y = netustm)) +
+  geom_boxplot() +
+  ylab("Frequency of Internet Usage") +
+  theme_classic()
+
+b = ggplot(ESS_NEW2, aes(y = rlgdgr)) +
+  geom_boxplot() +
+  ylab("Religiosity of Respondent") +
+  theme_classic()
+
+c = ggplot(ESS_NEW2, aes(y = grspnum)) +
+  geom_boxplot() +
+  ylab("Usual Gross Pay of Respondent") +
+  scale_y_log10() +
+  theme_classic()
+
+d = ggplot(ESS_NEW2, aes(y = agea)) +
+  geom_boxplot() +
+  ylab("Age of Respondent") +
+  theme_classic()
+
+grid.arrange(a, b, c, d, ncol = 2)
+```
+
+So, based on these boxplots we can see that two variables have some outliers, especially, the outcome - Frequency of Internet usage - and one predictor - Usual gross pay of respondent (with a huge one). The other two variables do not have ouliers at all.
+
+Now we're visualizing the distributions of variables with histograms (x axis of grspnum is again log due to huge outlier).
+
+```{r warning = F, message = F}
+e = ggplot(data = ESS_NEW2, aes(x = netustm)) +
+  geom_histogram() +
+  xlab("Frequency of Internet Usage") +
+  theme_classic()
+
+f = ggplot(data = ESS_NEW2, aes(x = rlgdgr)) +
+  geom_histogram(binwidth = 0.5) +
+  xlab("Religiosity of Respondent") +
+  theme_classic()
+
+g = ggplot(data = ESS_NEW2, aes(x = grspnum)) +
+  geom_histogram() +
+  xlab("Usual Gross Pay of Respondent") +
+  scale_x_log10() +
+  theme_classic()
+
+h = ggplot(data = ESS_NEW2, aes(x = agea)) +
+  geom_histogram() +
+  xlab("Age of Respondent") +
+  theme_classic()
+
+grid.arrange(e, f, g, h, ncol = 2)
+```
+
+These histograms confirms that all variables have non normal distribution.
+
+Now let's switch to categorical variable and examine it with barplot. At first, let's combine all ocupations in groups. We chose categories based on the following logic: there are a lot of occupations, which could be merged into larger groups. These groups could be identified from the first digit of the ISCO-08 code (in our case, four-digit occupations which code starts from 1 are related to Managers and so on). Thus, we merge all the occupations into 9 big groups:
+
+```{r}
+ESS_NEW2 = ESS_NEW2 %>% filter(ESS_NEW2$isco08 != "110" & ESS_NEW2$isco08 != "210" & ESS_NEW2$isco08 != "310")
+ESS_NEW2$isco08 = substring(ESS_NEW2$isco08, 1, 1)
+table(ESS_NEW2$isco08)
+
+ESS_NEW2$isco08 = as.factor(ESS_NEW2$isco08)
+levels(ESS_NEW2$isco08)[1] <- "Managers"
+levels(ESS_NEW2$isco08)[2] <- "Professionals"
+levels(ESS_NEW2$isco08)[3] <- "Technicians and associate professionals"
+levels(ESS_NEW2$isco08)[4] <- "Clerical support workers"
+levels(ESS_NEW2$isco08)[5] <- "Service and sales workers"
+levels(ESS_NEW2$isco08)[6] <- "Skilled agricultural, forestry and fishery workers"
+levels(ESS_NEW2$isco08)[7] <- "Craft and related trades workers"
+levels(ESS_NEW2$isco08)[8] <- "Plant and machine operators, and assemblers"
+levels(ESS_NEW2$isco08)[9] <- "Elementary occupations"
+```
+
+Then we can make a barplot to show visually how many observations are in the particular occupational group.
+
+```{r}
+ggplot(ESS_NEW2, aes(x = isco08)) +
+  geom_bar() +
+  xlab("Groups of professions") +
+  ylab("Number of Observations") +
+  coord_flip() +
+  theme_classic()
+```
+
+Based on this barplot we can clearly see that all groups are different in size. We also see that in Poland (at least in our cleared dataset), the most popular professions (having the greatest amount of observations) belong to the categories "Professionals" and "Service and sales workers", at the same time the less wide-spread occupations belong to the "Elementary occupations" and "Skilled agricultural, forestry and fishery workers" categories.
+
+Now we can construct scatterplots to see how the continuous variables are really correlated to the outcome (again, grspnum x scale is log).
+
+```{r warning = F}
+i = ggplot(data = ESS_NEW2, aes(x = rlgdgr, y = netustm)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Religiosity of Respondent") +
+  ylab("Frequency of Internet Usage") +
+  theme_classic()
+
+j = ggplot(data = ESS_NEW2, aes(x = agea, y = netustm)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Age of Respondent") +
+  ylab("Frequency of Internet Usage") +
+  theme_classic()
+
+k = ggplot(data = ESS_NEW2, aes(x = grspnum, y = netustm)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Usual Gross Pay") +
+  ylab("Frequency of Internet Usage") +
+  scale_x_log10() +
+  theme_classic()
+
+grid.arrange(i, j, k, ncol = 2)
+```
+
+These scatterplots show us that there is a positive correlation between Usual gross pay and Frequency of Internet usage (the slope is visually big but we think this is so because of outliers). Also, there is a negative correlation between Religiosity of respondent & Frequency of Internet usage and Age of respondent & Frequency of Internet usage. The slope seems to be low.
+
+## Correlation Matrix
+
+So, now we construct a correlation matrix in order to find out the highest (significant) coefficients between our variables. As our variables are distributed non normally, we use spearman method.
+
+```{r}
+sjt.corr(ESS_NEW2[,1:4], corr.method = "spearman")
+```
+
+On this matrix we can see a lot of coefficients, but we only interested in the highest coefficients. So, the highest correlation coefficient in this matrix is -0.273 (although it indicates low correlation). It represents the relation between Frequency of Internet usage and Religiosity of respondent. So, we will use this predictor as a basis on our regression models. But firstly we'll check the significance of correlation with p-value.
+
+```{r}
+cor.test(ESS_NEW2$netustm, ESS_NEW2$rlgdgr, method = "spearman")
+```
+
+As we see from the output, the p-value is less than 0.01, so the correlation is statistically significant.
+
+## Linear Regression Models
+
+Now, we will construct the first regression model with only one predictor to find out how the frequency of Internet usage on typical day can be predicted by a person's degree of religiosity.
+
+```{r}
+m1 <- lm(netustm ~ rlgdgr, data = ESS_NEW2)
+tab_model(m1)
+```
+
+So, we can see that P-value is less than 0.01 and thus the predicition is statistically significant. R-squared = 0.050 and Adjusted R-squared = 0.047, so that there is only 4.7% of variation in the frequency of Internet usage on typical day that can be explained by this model, which indicates the low level of predictive power (is can be compared with correlation coefficient as it indicates low correlation and thus we have low predictive power). The regression coefficient is equal to the -12.39, while the correlation coefficient is equal to the -0.273, so the outcome gradually decreases while predictor increases. As we can see both the regression model and correlation matrix show the negative relation between variables.
+
+The next step is constructing model with two predictors by adding continuous variable, which, in theory, will help predict better the frequency of Internet usage on typical day - we chose the age as it has respectively high correlation coefficient (-0.243). But at first we should change the "agea" variable to make it start from 0, so that we will be able to interpret intercept value.
+
+```{r}
+ESS_NEW2$agea_st = ESS_NEW2$agea - 18
+table(ESS_NEW2$agea_st)
+```
+
+Now we are ready to create the second model.
+
+```{r}
+m2 <- lm(netustm ~ rlgdgr + agea_st, data = ESS_NEW2)
+tab_model(m2)
+```
+
+As we can see, the agea_st variable is close to a significant level, since p-value is 0.013 which is approximately equal to 0.01. Next, we construct the third model by adding another variable, which is catigorical for the same purpose.
+
+```{r}
+m3 <- lm(netustm ~ rlgdgr + agea_st + isco08, data = ESS_NEW2)
+tab_model(m3)
+```
+
+We can see that three levels of categorical predictors have significant p-value (less than 0.01), while other categories have insignificant p-value (from 0.082 to 0.623). Also, the change in p-value for agea_st variable can be noticed - now it has the significant 0.001 value.
+
+After that, we compare all models in order to find the best model, which is fits better than others. To do this we use ANOVA function.
+
+```{r}
+anova(m1, m2, m3)
+```
+
+We will make a conclusion about which model is the best based on the value of F-ratio. 
+
+So, we can see that the third model fits better than others. In detail, the second model predicts the outcome of Frequency of Internet usage better than the first model, because the p-value of the second model is really close to statistically significant indicator (around 0.01). However, the third model also has significant p-value, which is less then 0.01, so that the third model predicts the outcome better than the second. This means that we will continue to work with the third model.
+
+Now we can provide summary of the chosen model.
+
+```{r}
+summary(m3)
+```
+
+From the model summary we can see that the residuals are assymetrically distributed - the positive values has big range - which means that the model does not predict the outcome in nice way. As for coefficients, it has intercept of 356.2 meaning that with 0 level of predictors and the occupational Managers group (it was taken as reference group by R automaticly as it the first group), the outcome variable has the value of 356.2. Both continuous predictors have statistically significant p-value. Religiosity (rlgdgr) has estimate -11.17 which means that with the increase of religiosity level by 1, the outcome (Internet usage) will decrease by 11.17. For age, the estimate is -2.73, so that with increase of age by 1, the outcome will decrease by this number. The absolute value of t for them is relatively big, so we can conclude that the corresponding regression coefficient is different from 0. Standart error for age is tiny, while for religiosity is higher meaning the bigger deviations in sampling distirbution.
+
+As for categorical predictor of occupation, as mentioned before, the reference group is Managers which are included in Intercept value. So, the estimates for other groups indicate the change in Internet usage if we switch from Managers to this particular occupational groups. For example, the estimate for Professionals is -13.95 which means that with switching from reference group to Professionals the outcome will decrease by 13.95. It is noticable that all of the occupational groups have big standart errors (minimum is 28.37) which indicates big deviations in sampling distribution. The biggest one is in Elementary occupations (70.21) - we expect it is connected to a little amount of observations in this group (5). The absolute t-values are bigger than 1 except the one for Professionals (-0.492) meaning that the corresponding regression coefficients are different from 0, but it is less trustful for this particular group. Also, the p-value is in an insignificant level for Professional group as well as for Technicians, Clerical support workers, Skilled agricultural workers, and Elementary occupations. However, for the rest of the occupational groups, it shows statistically significant value.
+
+As we've already seen, our model has satisfactory R-squared of 0.135, so the model can explain 13.5% of the variance in the outcome variable. Adjusted R-squared which the normalizes R-squared considering the amount of used variables and samples is less -  0.106 - indicating also satisfactory predictive power of 10.6%. Residual standart error seems to be big, so we can conclude that our model does not fit well. P-value is statistically significant, so the model predicts better than random.
+
+According to the summary results, the regression equation with all coefficients is like that:
+
+ * netustm = 356.2 - 11.17 * rlgdgr - 2.73 * agea - 13.95 * Professionals - 40.11 * Technicians and associate professionals - 40.50	* Clerical support workers - 82.33 * Service and sales workers - 63.44	* Skilled agricultural, forestry and fishery workers - 102.76 * Craft and related trades workers - 129.12 * Plant and machine operators, and assemblers - 122.40 * Elementary occupations
+
+Based on the equation we can again conclude that:
+
+ * If the predictors are at the zero level and the occupational group is Managers, the Internet usage has value of 356.20.
+ * With an increase of a person's level of religiosity by one point, the frequency of Internet usage on typical day decreases by 11.17
+ * As a person gets older by one year the frequency of Internet usage on typical day decreases by 2.73
+ * If a respondent belongs to the Professionals categoty of occupation the frequency of Internet usage on typical day decreases by 13.95 compared to Managers
+ * If a respondent belongs to the Technicians and associate professionals categoty of occupation the frequency of Internet usage on typical day decreases by 40.11 compared to Managers
+ * If a respondent belongs to the Clerical support workers categoty of occupation the frequency of Internet usage on typical day decreases by 40.50 compared to Managers
+ * If a respondent belongs to the Service and sales workers categoty of occupation the frequency of Internet usage on typical day decreases by 82.33 compared to Managers
+ * If a respondent belongs to the Skilled agricultural, forestry and fishery workers categoty of occupation the frequency of Internet usage on typical day decreases by 63.44 compared to Managers
+ * If a respondent belongs to the Craft and related trades workers categoty of occupation the frequency of Internet usage on typical day decreases by 102.76 compared to Managers
+ * If a respondent belongs to the Plant and machine operators, and assemblers categoty of occupation the frequency of Internet usage on typical day decreases by 129.12 compared to Managers
+ * If a respondent belongs to the Elementary occupations categoty of occupation the frequency of Internet usage on typical day decreases by 122.40 compared to Managers
+
+```{r}
+tab_model(m1, m2, m3)
+```
+
+Now we can make a conclusion that the chosen outcome variable is better predicted by the Religiosity, Age and Occupation of the respondents. The H0 was rejected for three predictors of four. The model has satisfactory predictive power, so we can say that we can nicely use these predictors for the chosen outcome.
+
+As it was expected, age is negatively correlated with Internet usage, the same as for religiosity (although with low correlation and low predictive power). However, for gross pay our expections did not hold - it resulted that this variable is not even correlated. Our expectations were hold in the case of the respondents occupation as the switching from the first Managers group to the more "distant" ones the change in Internet usage increases, however, the ninth group has a little of observations, so we think it explain a little decrease in change (moving from the 1 to 8 group results in -129.12 change of the outcome but for 1 to 7 is -102.75), however, some groups are not statistically significant. The regression model also shows statistical significance, and the predictive power has a satisfactory level. That is, this model generally fits.
+
+## Linear Regression Assimptions Check
+
+As we already said, our model is not the best one due to satisfactory predictive power, but not the great. We can state that also it does not meet the assumptions, as the residuals are distributed assymmetrically and non normally. Our observations has huge outliers, so it decreases the model fit. However, no values crossed the Cook's distance which is some kind of good indicator.
+
+```{r}
+plot(m3)
+cor.test(ESS_NEW2$rlgdgr, ESS_NEW2$agea, method = "spearman")
+```
+
+The correlation coefficient between the predictors we chose showed not that significant p-value (0.028 which is bigger than 0.01), so the mediation effect is less probable which is also good.
+
+## Bibliography
+
+1. Statista.com, Share of internet users in Poland from 2015 to 2019, by age group [Electronic resource] URL: https://www.statista.com/statistics/1015451/poland-internet-users-by-age-group/
+2. Wangberg, S. C., Andreassen, H. K., Prokosch, H.-U., Santana, S. M. V., Sørensen, T., & Chronaki, C. E. (2007). Relations between Internet use, socio-economic status (SES), social support and subjective health. Health Promotion International, 23(1), 70–77. 
+3. Armfield, G. G., & Holbert, R. L. (2003). The relationship between religiosity and Internet use. Journal of Media and Religion, 2(3), 129-144.
+4. Stat.gov.pl, Infographic—Religiousness of Polish inhabitiants [Electronic resource] URL: https://stat.gov.pl/en/infographics-and-widgets/infographics/infographic-religiousness-of-polish-inhabitiants,4,1.html
+
+# Project IV
+
+## Introduction
+
+We continue studying topic the topic 'Media & Social Trust', so the outcome variable has not changed since last project - it is still frequency of Internet usage on a typical day (netustm). This time, we will explore the interaction effect between our predictors and, again, each of us contributed to a particular part of the project:
+
+* Mukhin Kirill: decribing the distribution of the outcome and predictors, calculating the correlation between continuous predictors , creating a regression and its interpretation, creating the model with interaction and interpreting it, creating the interaction plots and its interpretation , testing the improvement in R-squared and interpreting the results.
+* Shvets Fedor: update of projects 1-3, creating a research question and hypotheses, searching for variables, testing the improvement in R-squared and interpreting the results, creating interaction plots and its interpretation, making overall conclusions.
+* Kapitonov Denis: update of projects 1-3, creating a research question and hypotheses, searching for literature, searching for variables, creating the model with interaction and interpreting it, creating interaction plots and its interpretation, making overall conclusions.
+* Gorokohva Anastasia: update of projects 1-3, searching for variables, creating a regression and its interpretation, creating the model with interaction and interpreting it, creating the interaction plots and its interpretation.
+
+```{r warning = F}
+ESS_NEW3 = ESS9 %>% select(netustm, agea, rlgatnd, isco08)
+
+str(ESS_NEW3)
+```
+
+The predictors which we took from the previous project are Age and Occupation. The new variable is Frequency of religious services attendance which is in fact have similar theme as Religiosity taken in the previous project.
+
+- Occupation. In the work of Thompson S.H. Teo[1] there was proven the statement that depending on the type of occupation, the level of internet usage is increasing (especially for IT-workers). We expect that some categories of occupation will also effect our model in some extent - higher status occupations like Managers will have higher Internet Usage frequency and with lowering the occupational status the Internet Usage will also decline.
+- Frequency of Religious Cervices Attendance. The same themed variable was already used by us in a previous project - religiosity. As we have found out, the degree of religiousness of the respondent is negatively associated with the usage of the Internet, as stated in a study by Greg G. Armfield and R. lance Holbert[2]. Now we want to look at religiosity from a different perspective. We assume that frequency of religious services attendance is also negatively related to Internet usage  on a typical day. We want to know if our assumptions and results will be confirmed with the existing study.
+- Age. We have the same assumption as in the previous project: older people use the internet much less than the youngers. Remembering the statistics[3], the statement is true for Poland. So this variable is expected to affect the frequency of Internet usage negatively.
+
+The interaction effect which we are going to examine is the connection between frequency of religious services attendance and age. Based on researches which are described in the variables part, we can assume that the interaction effect of education and religion variables will have a negative impact on the frequency of Internet usage.
+
+We put forward a research question:
+Which of our chosen variables predict the frequency of Internet use on typical day in Poland in the better way and will the interaction effect between the variables improve our the predictive power of our model?
+
+We also formulate research hypotheses:
+
+Null hypothesis (H0):
+
+- There is no relation between Age and outcome (Frequency of Internet usage).
+- There is no relation between Frequency of religious services attendance and outcome (Frequency of Internet usage).
+- There is no relation between Occupation and outcome (Frequency of Internet usage).
+- There is no relation between connection of Age with Frequency of religious services attendance and outcome (Frequency of Internet usage).
+
+Alternative hypothesis (Ha):
+
+- There is relation between Age and outcome (Frequency of Internet usage).
+- There is relation between Frequency of religious services attendance and outcome (Frequency of Internet usage).
+- There is relation between Occupation and outcome (Frequency of Internet usage).
+- There is relation between connection of Age with Frequency of religious services attendance and outcome (Frequency of Internet usage).
+
+As now we have the different set of variables, let's describe them with a table. At first, we create four vectors with original names, description, variable types, and values range.
+
+```{r}
+Variable_Name = c('netustm', 'isco08', 'agea', 'rlgatnd')
+
+Description = c('Frequency of Internet usage', 'Occupation of respondent', 'Age of respondent', 'Frequency of religious services attendance (apart from special occasions as wedding or funeral)')
+
+Variable_Type = c('Ratio', 'Nominal', 'Ratio', 'Ordinal')
+
+Measurement <- c('0-900', 'Occupational groups coded by ISCO-08 with range from 110 to 9629', '15-87', '1-7: Every day - More than once a week - Once a week - At least once a month - Only on special hody days - Less often - Never')
+```
+
+Now let's create a table for more convenient way of representation.
+
+```{r}
+data_description <- data.frame(Variable_Name, Description, Variable_Type, Measurement, stringsAsFactors = FALSE)
+
+kable(data_description) %>% 
+  kable_styling(bootstrap_options = c('bordered'), full_width = FALSE)
+```
+
+Let's recode our Occupation variable: we will merge observations into larger groups of the first digit in ISCO-08 coding and name them properly. The military three-digit groups are deleted due to a few observations in it.
+
+```{r}
+ESS_NEW3 = ESS_NEW3 %>% filter(ESS_NEW3$isco08 != "110" & ESS_NEW3$isco08 != "210" & ESS_NEW3$isco08 != "310")
+ESS_NEW3$isco08 = substring(ESS_NEW3$isco08, 1, 1)
+
+ESS_NEW3$isco08 = as.factor(ESS_NEW3$isco08)
+levels(ESS_NEW3$isco08)[1] <- "Managers"
+levels(ESS_NEW3$isco08)[2] <- "Professionals"
+levels(ESS_NEW3$isco08)[3] <- "Technicians and associate professionals"
+levels(ESS_NEW3$isco08)[4] <- "Clerical support workers"
+levels(ESS_NEW3$isco08)[5] <- "Service and sales workers"
+levels(ESS_NEW3$isco08)[6] <- "Skilled agricultural, forestry and fishery workers"
+levels(ESS_NEW3$isco08)[7] <- "Craft and related trades workers"
+levels(ESS_NEW3$isco08)[8] <- "Plant and machine operators, and assemblers"
+levels(ESS_NEW3$isco08)[9] <- "Elementary occupations"
+```
+
+Now let's check if there are coded missing values as "Refusal", "Don't know" - they are represented by the big numbers like 6666, 7777 or 8888.
+
+```{r}
+table(ESS_NEW3$netustm)
+table(ESS_NEW3$rlgatnd)
+table(ESS_NEW3$agea)
+table(ESS_NEW3$isco08)
+```
+
+Hopefully, there are none of such observations. Now let's remove all NA's so making sure that all our observations containt information about the variables.
+
+```{r}
+ESS_NEW3 = na.omit(ESS_NEW3)
+```
+
+## Data Exploration
+
+Let's look at the summary statistics of a chosen variables.
+
+```{r}
+summary(ESS_NEW3)
+```
+
+As we can see, the outcome variable has the assymetrical distribution - it has the 3rd quartile of 240 (which is also distant from the median), but the maximum of 900, so at least one huge outlier exists. Median is less than mean value, so the right skeweness is prorosed. As age's mean and median are very close to each other, the distribution seem to be close to normal, also the 1st and the 3rd quartiles looks symmetrical. Although at least one positive outlier exists (84). The quartiles of frequency of religious services attendance are symmetrical - 3 and 5 with the median of 4. Mean (4.237) and median are roughly close, and minimum and maximum are symmerical - 1 and 7. As for occupation, we see that Professionals group is the biggest one with 150 observations, however, other groups could have at least three times less observations in it as Plant and machine operators (52).
+
+Let's check the variables' outliers with boxplots.
+
+```{r message = FALSE}
+a = ggplot(ESS_NEW3, aes(y = netustm)) +
+  geom_boxplot() +
+  ylab("Frequency of Internet Usage") +
+  theme_classic()
+
+b = ggplot(ESS_NEW3, aes(y = rlgatnd)) +
+  geom_boxplot() +
+  ylab("Frequency of religious services attendance") +
+  theme_classic()
+
+c = ggplot(ESS_NEW3, aes(y = agea)) +
+  geom_boxplot() +
+  ylab("Age of Respondent") +
+  theme_classic()
+
+grid.arrange(a, b, c, ncol = 2)
+```
+
+The outcome variable has four outliers, although the age has only one and frequency of religious services attendance has no outliers at all.
+
+Now let's check the distributions with histograms.
+
+```{r warning = FALSE, message = FALSE}
+e = ggplot(data = ESS_NEW3, aes(x = netustm)) +
+  geom_histogram() +
+  xlab("Frequency of Internet Usage") +
+  theme_classic()
+
+f = ggplot(data = ESS_NEW3, aes(x = rlgatnd)) +
+  geom_histogram(binwidth = 0.5) +
+  xlab("Frequency of religious services attendance") +
+  theme_classic()
+
+g = ggplot(data = ESS_NEW3, aes(x = agea)) +
+  geom_histogram() +
+  xlab("Age of Respondent") +
+  theme_classic()
+
+grid.arrange(e, f, g, ncol = 2)
+```
+
+As it was expected, the outcome variable has right-skeweness, other variables also represent non normal distribution.
+
+Now we switch to the categorical occupation variable - let's visualize it's groups with barplot.
+
+```{r}
+ggplot(ESS_NEW3, aes(x = isco08)) +
+  geom_bar() +
+  xlab("Groups of professions") +
+  ylab("Number of Observations") +
+  coord_flip() +
+  theme_classic()
+```
+
+Professionals and Service and sales workers have the highest number observations. However, some groups like Elementary occupations and Skilles agricultural, foresty and fishery workers have much less.
+
+Now we will check if the continuos variables are really correlated to the outcome with scatteplots.
+
+```{r message = FALSE}
+i = ggplot(data = ESS_NEW3, aes(x = rlgatnd, y = netustm)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Frequency of religious services attendance") +
+  ylab("Frequency of Internet Usage") +
+  theme_classic()
+
+j = ggplot(data = ESS_NEW3, aes(x = agea, y = netustm)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Age of Respondent") +
+  ylab("Frequency of Internet Usage") +
+  theme_classic()
+
+grid.arrange(i, j, nrow = 2)
+```
+
+The Frequence of religious services attendance and Frequency of Internet Usage are positively correlated. The Age is negatively correlated with the outcome. The slope does not seem to be big.
+
+## Correlation matrix
+
+Let's now look at the correlation matrix and see what are the exact correlation coefficient. We use spearman-method as our data has non normal distribution.
+
+```{r}
+sjt.corr(ESS_NEW3[,1:3], corr.method = "spearman")
+```
+
+As it was seen in scatterplots, Age is negatively correlated to the outcome variable and Frequency of Religious Services Attendance - positively. We see that the matrix indicates the low correlation with coefficients -0.25 and 0.208 respectively. Although, it is satisfying. Moreover, we can notice that predictors are not correlated with each other at all - the coefficient equals to -0.059 which is a good indicator.
+
+Now let's check the significance of the correlation between the outcome and its predictors.
+
+```{r}
+cor.test(ESS_NEW3$netustm, ESS_NEW3$agea, method = "spearman")
+cor.test(ESS_NEW3$netustm, ESS_NEW3$rlgatnd, method = "spearman")
+```
+
+Both p-values are less than 0.01 and show the statistical significance of the correlations between both predictors and the outcome.
+
+## Linear Regression Models
+
+Now we construct regression models. At the first step, as in a previous project, we construct the regression model with only one predictor, which is categorical in order to find out how the frequency of Internet usage can be predicted by a respondent's occupation. The next step, is making the second model by adding another predictor - the age, which is continuous in order to make our model better for predicting the frequency of Internet usage on typical day. But, as usual, it is needed to change the "agea" variable to make it start from 0, so that intercept value will be interpretable. The last step, we add the third predictor, which is ordinal, to find out if the Frequency of religious services attendance will help us better predict the chosen outcome. We will immediately compare all the models to determine the best one, and then add an interactive effect. But, let's firstly recode agea variable. The same should be done with rlgatnd variable so it starts with zero, so we could interpret intercept value. We reassign labels after changing the variable.
+
+```{r}
+table(ESS_NEW3$agea)
+ESS_NEW3$agea_st = ESS_NEW3$agea - 15
+table(ESS_NEW3$agea_st)
+
+table(ESS_NEW3$rlgatnd)
+ESS_NEW3$rlgatnd1 = ESS_NEW3$rlgatnd - 1
+table(ESS_NEW3$rlgatnd1)
+
+ESS_NEW3$rlgatnd1 <- sjlabelled::set_labels(ESS_NEW3$rlgatnd1, labels = c("Every day", "More than once a week", "Once a week", "At least once a month", "Only on special holy days", "Less often", "Never"))
+
+ESS_NEW3$netustm = as.numeric(ESS_NEW3$netustm)
+ESS_NEW3$agea_st = as.numeric(ESS_NEW3$agea_st)
+```
+
+Now we create regression models.
+
+```{r}
+m1 <- lm(netustm ~ isco08, data = ESS_NEW3)
+m2 <- lm(netustm ~ isco08 + agea_st, data = ESS_NEW3)
+m3 <- lm(netustm ~ isco08 + agea_st + rlgatnd1, data = ESS_NEW3)
+
+anova(m1, m2, m3)
+```
+
+As we can see, each sequent model is better than the previous as all p-values are less than 0.01 and thus show statistical significance. The third model with three predictors is the best then, so we can use it to add the interaction effect. Moreover, we can notice that the F value decreases as we add new predictors which is a good sign.
+
+## Interaction Effect
+
+Now let's add the intercation effect to the third model. We chose the agea and rlgatnd variable for it - in this case Frequency of Religious Services Attendance will be a moderator for the relationship between Age and Frequency of Internet Usage. Also, we compare all four models in order to check if the interaction effect help us to predict the outcome better.
+
+```{r}
+m4 <- lm(netustm ~ isco08 + agea_st * rlgatnd1, data = ESS_NEW3)
+
+anova(m1, m2, m3, m4)
+```
+
+As we see, the p-value for the fourth model is also less than 0.01 and thus statistically significant, so the fourth model predicts better than the third. Therefore, we can see how the predictive power increases with the additions of new predictors and the interaction effect.
+
+```{r}
+tab_model(m1, m2, m3, m4)
+```
+
+Let's start with the first model - there are five levels of categorical predictor which have significant p-value, less than 0.01, while other three categories are insignificant (Managers groups is taken as the reference group in this case). The predictive power of the model is low, since R-squared = 0.036 and Adjusted R-squared is even less and equal to the 0.025, that is only 2.5% of the outcome can be explained by this model. It is clear that the second model predicts the outcome of Frequency of Internet usage better than the first model as the predictive power increased, R-squared = 0.087 and Adjusted R-squared = 0.076. Moreover, a new predictor in this model, age of a respondent, is also statistically significant. However, despite this, the third model is better than the second, because its predictive power becomes satisfactory - now R-squared = 0.119 and Adjusted R-squared = 0.106, so now we can predict around 10% of the outcome variation. The third predictor, frequency of religiosity services attendance, also shows statistical significance.
+
+If we look at the fourth model, we can firstly see that the intercept value is significant and has the value of 150.55 meaning that with the occupational group of Managers and zero level of other two predictors (agea_st = 0 which is 15 and rlgatnd1 = 0 which is 1 - Every day) the predicted level of Internet Usage will be 150.55 minutes a day. Then we see that some levels of occupation are not statistically significant as they have p-value bigger than 0.01. However, five levels, as previously, are significant. For example, Service and sales workers have significant p-value of 0.001 and the estimate of -61.99 - it means that if we hold age and frequency of religiosity services attendance contant and switch from Managers groups to Service and sales workers, then the Frequency of Internet Usage will decrease by -61.99. The age alone is no longer statistically significant, however, the rlgatnd1 does. If we look at the interaction effect between these two variables, we notice the statistical significance of this effect with p-value 0.005 and estimate -0.7. It means that we hold contant the Managers group and simultaneously increase age and rlgatnd1 by 1, so that the age increases by 1 year and the frequency of religiosity services attendance thus decreases as the bigger values meaning the less attendance frequency in our case (so that we switch form Every day to More than once a week) and our outcome variable decreases by 0.7. The predictive power increased in the fourth model - now we have R-squared = 0.128 and adjusted R-squared = 0.114, so that 11,4% of the outcome variation can be explained by our model.
+
+Now we can conclude that as we added new predictors and interaction effect to it, the predictive power of our model increased from 2,5% to 11,4% which is a satisfactory level of predictive power for us.
+
+```{r}
+summary(m4)
+```
+
+Among, abovementioned coefficients, we have several more in summary statistics for our model. We see that the residuals of the outcome variable are assymetrically distributed - the positive values have at least one huge outlier of 678.14 with the 3rd Quartile of only 39.94, so that the model does not predict the outcome in a good way. The standart errors are big for all occupational groups starting from 17.29 up to 31.54, so that big variation is possible. However, the interaction effect standart error is smallest one - 0.25 - which is a good indicator. The absolute t values are relatively big for most of the predictors except age alone (-0.055) and Proffesional group (-0.839), so that all corresponding regression coefficients are different from 0 but for these predictors it is not that trustable. Residual standart error is big - thus our model does not fit very well. The overall p-value for the model is less than 0.01 and thus statistically significant, so that our model predicts better than a random one.
+
+So, we can propose a new equation for our model:
+
+ * netustm = 150.55 - 14.52 * Professionals - 33.21 * Technicians and associate professionals - 43.07	* Clerical support workers - 61.99 * Service and sales workers - 88.67	* Skilled agricultural, forestry and fishery workers - 74.70 * Craft and related trades workers - 98.21 * Plant and machine operators, and assemblers - 98.80 * Elementary occupations - 0.05 * Age of respondent + 39.25 * How often attend religious services apart from special occasions - 0.70 * agea_st * rlgatnd
+
+## Interaction Plot
+
+Now that we explored the model statistics, let's construct the interaction plot.
+
+```{r fig.height = 7, fig.width = 15}
+plot_model(m4, type = "int") +
+  theme_bw()
+```
+
+The two polar attendance levels were taken authomaticly - Every day and Never. From the interaction plot we can see that till the rescaled age of approximately 38 (in the real age it is 53) the difference between these two levels remains. After this age, the confidence intervals intersects, so that the difference dissappear. Thus, we see that at all age levels the Every day attendance does not affect the Internet Usage. On the opposite, with becoming older, with none attendance at all the frequencty of Internet usage decreases and starting with 38 (53) years old, the difference between these two attendance levels vanishes.
+
+```{r fig.height = 7, fig.width = 15}
+plot_model(m4, type = "int", mdrt.values = "all") + theme_bw()
+```
+
+It is barely seen but between the more distant attendance groups there is difference at the first age values. However, all of them are merging at the same level of approximately 38. That means that the effect is significant under this age.
+
+## Linear Regression Assimptions Check
+
+As we've already mentioned, while our model presents satisfactory predictive power, its fit is not the best. Notice, that it also does not meet the assumptions as the residuals are distributed assymetrically and non normaly with high positive ones, so it decreases the fit quality. However, as well as in the previous project, no values crossed the Cook's distance, so it is good indicator.
+
+```{r}
+plot(m4)
+```
+
+Also, we can state that there is no correlation between the variables in interaction effect, so it is also good for the model.
+
+```{r message = F}
+ggplot(data = ESS_NEW3, aes(x = agea_st, y = rlgatnd1)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Age of Respondent") +
+  ylab("Frequency of Religious Services Attendance") +
+  theme_classic()
+```
+
+## Conclusion
+
+In the course of conducting statistical analysis, building regression models, and adding an interactive effect, we found out the following:
+
+- The predictors which we chose - age, occupation, frequency of religious services attendance as well as the interaction effect between the agea and rlgatnd - are all related to the frequency of Internet use, meaning that all null hypotheses are rejected.
+- Age and frequency of religious services attendance predictors are negatively related to our outcome. While our expectations about occupation  is also confirmed - as we move to lower status groups, the absolute value of negative estimate generally increase, although some exceptions also exist as well statistically insignificant effects for several groups.
+- If we consider statistically significant categories, we might conclude that Managers with zero level of age and religious services attendance have the highest Internet Usage frequency of 150.55 minutes a day. If we switch to another occupational groups, this values will decrease. The religious services attendance itself also affects the Internet Usage in the way that less people attend these services, the more they use Internet with increase of 39.26 minutes a day for each new decreasing level of attendance. If we will look at the change in both age and religious services attendance, then we could conclude that with each increased year old and decreased level of attendance the Internet Usage will drop by 0.7.
+- The R-squared and Adjusted R-squared in the final model indicate a satisfactory level of predictive power, and, respectively, equals to 0.128 (12.8%) and 0.114, so that around 11.4% of outcome variation could be explained by our model with interaction effect.
+
+- In General, we can conclude that although our model has not very bad predicting power for the frequency of Internet use, we cannot use it as it does not meet the linear regression assumptions.
+
+## Bibliography
+
+1. Teo, T.S.H. (1998), "Differential effects of occupation on Internet usage", Internet Research, Vol. 8 No. 2, pp. 156-165.
+2. Armfield, G. G., & Holbert, R. L. (2003). The relationship between religiosity and Internet use. Journal of Media and Religion, 2(3), 129-14.
+3. Statista.com, Share of internet users in Poland from 2015 to 2019, by age group [Electronic resource] URL: https://www.statista.com/statistics/1015451/poland-internet-users-by-age-group/
