@@ -63,9 +63,6 @@ ESS9 <- read_sav("C:/Users/fired/Desktop/UXA Maga/Projects/GitHub den1ceee/polan
 ## Data Selection
 
 There we choose 10 variables needed for the further analysis - 5 related to the topic of 'Media & Social Trust' and 5 socio-demographic. Also, we examine structure of the new dataset to check whether the filter operation was performed in accurate way.
-```{r}
-getwd()
-```
 
 ```{r}
 ESS_NEW = ESS9 %>% dplyr::select(nwspol, netusoft, netustm, ppltrst, pplfair, agea, gndr, marsts, eisced, emplrel, domicil)
@@ -966,9 +963,6 @@ kable(data_description) %>%
 ```
 
 Let's recode our Occupation variable: we will merge observations into larger groups of the first digit in ISCO-08 coding and name them properly. The military three-digit groups are deleted due to a few observations in it.
-```{r}
-ESS_NEW3
-```
 
 ```{r}
 ESS_NEW3 = ESS_NEW3 %>% filter(!isco08 %in% as.numeric(c("110", "210", "310")))

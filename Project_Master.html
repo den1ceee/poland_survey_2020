@@ -760,8 +760,6 @@ ESS9 &lt;- read_sav(&quot;C:/Users/fired/Desktop/UXA Maga/Projects/GitHub den1ce
 related to the topic of ‘Media &amp; Social Trust’ and 5
 socio-demographic. Also, we examine structure of the new dataset to
 check whether the filter operation was performed in accurate way.</p>
-<pre class="r"><code>getwd()</code></pre>
-<pre><code>## [1] &quot;C:/Users/fired/Desktop/UXA Maga/Projects/GitHub den1ceee/poland_survey_2020&quot;</code></pre>
 <pre class="r"><code>ESS_NEW = ESS9 %&gt;% dplyr::select(nwspol, netusoft, netustm, ppltrst, pplfair, agea, gndr, marsts, eisced, emplrel, domicil)
 str(ESS_NEW)</code></pre>
 <pre><code>## tibble [1,500 x 11] (S3: tbl_df/tbl/data.frame)
@@ -3782,21 +3780,6 @@ month - Only on special hody days - Less often - Never
 larger groups of the first digit in ISCO-08 coding and name them
 properly. The military three-digit groups are deleted due to a few
 observations in it.</p>
-<pre class="r"><code>ESS_NEW3</code></pre>
-<pre><code>## # A tibble: 1,500 x 4
-##      netustm      agea                       rlgatnd                      isco08
-##    &lt;dbl+lbl&gt; &lt;dbl+lbl&gt;                     &lt;dbl+lbl&gt;                   &lt;dbl+lbl&gt;
-##  1        60        37 4 [At least once a month]     4211 [Bank tellers and rel~
-##  2       120        23 5 [Only on special holy days] 7120 [Building finishers a~
-##  3       180        22 6 [Less often]                9629 [Elementary workers n~
-##  4        NA        83 3 [Once a week]               9112 [Cleaners and helpers~
-##  5       180        36 6 [Less often]                3123 [Construction supervi~
-##  6        NA        32 3 [Once a week]               3112 [Civil engineering te~
-##  7        90        29 4 [At least once a month]     2341 [Primary school teach~
-##  8       150        72 5 [Only on special holy days] 3334 [Real estate agents a~
-##  9        NA        45 3 [Once a week]               9329 [Manufacturing labour~
-## 10        NA        63 3 [Once a week]               4321 [Stock clerks]        
-## # ... with 1,490 more rows</code></pre>
 <pre class="r"><code>ESS_NEW3 = ESS_NEW3 %&gt;% filter(!isco08 %in% as.numeric(c(&quot;110&quot;, &quot;210&quot;, &quot;310&quot;)))
 ESS_NEW3$isco08 = substring(ESS_NEW3$isco08, 1, 1)
 
